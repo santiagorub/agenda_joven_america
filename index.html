@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#12141C">
+<title>Agenda Joven América</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Agenda JA">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12141C;
+    --surface: #1B1E2A;
+    --surface-2: #242838;
+    --surface-3: #2C3145;
+    --border: #2E3244;
+    --text: #EDEDF2;
+    --text-muted: #8B90A3;
+    --text-faint: #565B72;
+    --accent: #FF8A5B;
+    --accent-dim: rgba(255,138,91,0.16);
+    --accent-ring: rgba(255,138,91,0.45);
+    --danger: #E8607A;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; overscroll-behavior-y: none; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+  }
+
+  #app{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    padding: calc(14px + var(--safe-top)) 20px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar .title-group{ display:flex; flex-direction:column; }
+  .brand-row{ display:flex; align-items:center; gap: 12px; }
+  .brand-logo{
+    width: 42px; height: 42px;
+    flex-shrink: 0;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35));
+  }
+  .eyebrow{
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 2px;
+  }
+  .title-group h1{
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 20px;
+    margin: 0;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .icon-btn{
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .icon-btn:active{ background: var(--surface-2); transform: scale(0.96); }
+  .year-nav{ display:flex; align-items:center; gap: 14px; }
+  .year-nav .year-num{ font-family: var(--font-display); font-size: 20px; min-width: 54px; text-align:center; }
+
+  /* ---------- Screens ---------- */
+  .screen{
+    position: absolute;
+    inset: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+  }
+  .screen.active{ transform: translateX(0); position: relative; }
+  .screen.behind{ transform: translateX(-25%); }
+
+  .scroll-area{
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(24px + var(--safe-bottom));
+  }
+
+  /* ---------- Year view: month grid ---------- */
+  .month-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px 20px 8px;
+  }
+  .month-card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 14px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .month-card:active{ background: var(--surface-2); transform: scale(0.98); }
+  .month-card .m-name{
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .month-card .m-count{
+    font-size: 10.5px;
+    color: var(--accent);
+    font-family: var(--font-body);
+    font-weight: 600;
+  }
+  .mini-dots{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .mini-dot{
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--surface-3);
+  }
+  .mini-dot.has-event{ background: var(--accent-dim); }
+  .mini-dot.today{ background: var(--accent); }
+  .mini-dot.empty{ background: transparent; }
+
+  /* ---------- Month view ---------- */
+  .month-header{
+    padding: calc(14px + var(--safe-top)) 20px 12px;
+    display:flex; align-items:center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .month-header .m-title{
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .month-header .nav-arrows{ display:flex; gap:8px; }
+
+  .weekday-row{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 14px 14px 4px;
+    flex-shrink: 0;
+  }
+  .weekday-row span{
+    text-align:center;
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .day-grid{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    padding: 6px 14px 20px;
+  }
+  .day-cell{
+    aspect-ratio: 1;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .day-cell.empty{ visibility: hidden; }
+  .day-cell .d-num{ font-size: 15px; font-weight: 500; }
+  .day-cell:active{ background: var(--surface-2); }
+  .day-cell.today{ border-color: var(--accent-ring); }
+  .day-cell.today .d-num{ color: var(--accent); font-weight: 700; }
+  .day-cell .dot-row{
+    display:flex; gap: 3px; margin-top: 4px; height: 5px;
+  }
+  .day-cell .dot-row span{
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ---------- Day view ---------- */
+  .day-header{
+    padding: calc(14px + var(--safe-top)) 20px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .day-header .d-eyebrow{
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 4px;
+  }
+  .day-header .d-title{
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+  }
+  .day-header .d-topline{ display:flex; align-items:center; justify-content: space-between; }
+
+  .event-list{ padding: 16px 20px; display:flex; flex-direction:column; gap: 10px; }
+  .empty-state{
+    text-align:center;
+    padding: 60px 30px;
+    color: var(--text-muted);
+  }
+  .empty-state .es-icon{ font-size: 32px; margin-bottom: 10px; opacity: 0.6; }
+  .empty-state p{ font-size: 14px; line-height: 1.5; margin: 0; }
+
+  .event-card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .event-card .e-time{
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    min-width: 46px;
+    padding-top: 1px;
+  }
+  .event-card .e-body{ flex: 1; min-width: 0; }
+  .event-card .e-title{ font-size: 15.5px; font-weight: 600; margin-bottom: 2px; }
+  .event-card .e-note{ font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+  .event-card .e-del{
+    background: none; border: none; color: var(--text-faint);
+    font-size: 18px; padding: 2px 4px; cursor:pointer; flex-shrink:0;
+  }
+  .event-card .e-del:active{ color: var(--danger); }
+
+  .fab{
+    position: absolute;
+    right: 20px;
+    bottom: calc(20px + var(--safe-bottom));
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #1A1208;
+    border: none;
+    font-size: 26px;
+    font-weight: 600;
+    display: flex; align-items:center; justify-content:center;
+    box-shadow: 0 8px 20px rgba(255,138,91,0.35);
+    cursor: pointer;
+    line-height: 0;
+    padding-bottom: 2px;
+  }
+  .fab:active{ transform: scale(0.94); }
+
+  /* ---------- Sheet (add/edit event) ---------- */
+  .sheet-backdrop{
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+    z-index: 20;
+  }
+  .sheet-backdrop.open{ opacity: 1; pointer-events: auto; }
+
+  .sheet{
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: var(--surface);
+    border-radius: 22px 22px 0 0;
+    padding: 10px 20px calc(20px + var(--safe-bottom));
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+    z-index: 21;
+    border-top: 1px solid var(--border);
+  }
+  .sheet.open{ transform: translateY(0); }
+  .sheet-handle{
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--surface-3);
+    margin: 6px auto 16px;
+  }
+  .sheet h2{
+    font-family: var(--font-display);
+    font-size: 19px;
+    margin: 0 0 16px;
+  }
+  .field{ margin-bottom: 14px; }
+  .field label{
+    display:block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .field input, .field textarea{
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    outline: none;
+  }
+  .field input:focus, .field textarea:focus{ border-color: var(--accent-ring); }
+  .field textarea{ resize: none; min-height: 64px; }
+  .field-row{ display:flex; gap: 12px; }
+  .field-row .field{ flex:1; }
+
+  .sheet-actions{ display:flex; gap: 10px; margin-top: 4px; }
+  .btn{
+    flex:1;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+  }
+  .btn-primary{ background: var(--accent); color: #1A1208; }
+  .btn-primary:active{ transform: scale(0.98); }
+  .btn-ghost{ background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+
+  ::-webkit-scrollbar{ display:none; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== YEAR SCREEN ===== -->
+  <div class="screen active" id="screen-year">
+    <div class="topbar">
+      <div class="brand-row">
+        <img src="icons/icon-192.png" alt="Joven América" class="brand-logo">
+        <div class="title-group">
+          <span class="eyebrow">Agenda</span>
+          <h1>Joven América</h1>
+        </div>
+      </div>
+      <div class="year-nav">
+        <button class="icon-btn" id="prevYear">‹</button>
+        <span class="year-num" id="yearLabel">2026</span>
+        <button class="icon-btn" id="nextYear">›</button>
+      </div>
+    </div>
+    <div class="scroll-area">
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== MONTH SCREEN ===== -->
+  <div class="screen" id="screen-month">
+    <div class="month-header">
+      <button class="icon-btn" id="backToYear">‹</button>
+      <span class="m-title" id="monthTitle">Marzo</span>
+      <div class="nav-arrows">
+        <button class="icon-btn" id="prevMonth">‹</button>
+        <button class="icon-btn" id="nextMonth">›</button>
+      </div>
+    </div>
+    <div class="weekday-row">
+      <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+    </div>
+    <div class="scroll-area">
+      <div class="day-grid" id="dayGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== DAY SCREEN ===== -->
+  <div class="screen" id="screen-day">
+    <div class="day-header">
+      <div class="d-topline">
+        <button class="icon-btn" id="backToMonth">‹</button>
+        <div style="flex:1"></div>
+      </div>
+      <span class="d-eyebrow" id="dayEyebrow">Marzo 2026</span>
+      <div class="d-title" id="dayTitle">Lunes 3</div>
+    </div>
+    <div class="scroll-area">
+      <div class="event-list" id="eventList"></div>
+    </div>
+    <button class="fab" id="addEventBtn">+</button>
+  </div>
+
+  <!-- ===== ADD/EDIT SHEET ===== -->
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <div class="sheet" id="eventSheet">
+    <div class="sheet-handle"></div>
+    <h2 id="sheetTitle">Nuevo evento</h2>
+    <div class="field">
+      <label for="inpTitle">Título</label>
+      <input type="text" id="inpTitle" placeholder="Ej: Reunión con el equipo" maxlength="80">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="inpTime">Hora</label>
+        <input type="time" id="inpTime">
+      </div>
+    </div>
+    <div class="field">
+      <label for="inpNote">Nota (opcional)</label>
+      <textarea id="inpNote" placeholder="Detalles adicionales..." maxlength="200"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" id="cancelSheet">Cancelar</button>
+      <button class="btn btn-primary" id="saveEvent">Guardar</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "agenda_events_v1";
+  var MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+  var today = new Date();
+  today.setHours(0,0,0,0);
+
+  var state = {
+    viewYear: today.getFullYear(),
+    viewMonth: today.getMonth(), // 0-11
+    selectedDate: null, // "YYYY-MM-DD"
+    editingEventId: null
+  };
+
+  // ---------- Storage ----------
+  function loadEvents(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){
+      return {};
+    }
+  }
+  function saveEvents(data){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    catch(e){ /* almacenamiento no disponible */ }
+  }
+  var events = loadEvents();
+
+  function dateKey(y,m,d){
+    return y + "-" + String(m+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+  }
+  function eventsFor(key){
+    return (events[key] || []).slice().sort(function(a,b){
+      return (a.time||"99:99").localeCompare(b.time||"99:99");
+    });
+  }
+
+  // ---------- Screen nav ----------
+  var screens = {
+    year: document.getElementById("screen-year"),
+    month: document.getElementById("screen-month"),
+    day: document.getElementById("screen-day")
+  };
+  var navStack = ["year"];
+
+  function goTo(name){
+    navStack.push(name);
+    render_currentScreen();
+  }
+  function goBack(){
+    if(navStack.length > 1){
+      navStack.pop();
+      render_currentScreen();
+    }
+  }
+  function render_currentScreen(){
+    var current = navStack[navStack.length-1];
+    Object.keys(screens).forEach(function(key){
+      screens[key].classList.remove("active","behind");
+    });
+    screens[current].classList.add("active");
+  }
+
+  // Android hardware back button support (Cordova/WebView)
+  document.addEventListener("backbutton", function(e){
+    e.preventDefault();
+    if(isSheetOpen()){ closeSheet(); return; }
+    if(navStack.length > 1){ goBack(); }
+  }, false);
+
+  // ---------- Year view ----------
+  var yearLabel = document.getElementById("yearLabel");
+  var monthGrid = document.getElementById("monthGrid");
+
+  function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+  function firstWeekdayMon(y,m){
+    // 0 = Monday ... 6 = Sunday
+    var jsDay = new Date(y,m,1).getDay(); // 0=Sunday
+    return (jsDay + 6) % 7;
+  }
+
+  function renderYear(){
+    yearLabel.textContent = state.viewYear;
+    monthGrid.innerHTML = "";
+    for(var m=0; m<12; m++){
+      var card = document.createElement("div");
+      card.className = "month-card";
+
+      var nameRow = document.createElement("div");
+      nameRow.className = "m-name";
+      var nameSpan = document.createElement("span");
+      nameSpan.textContent = MONTH_NAMES[m];
+      nameRow.appendChild(nameSpan);
+
+      var count = countEventsInMonth(state.viewYear, m);
+      if(count > 0){
+        var countSpan = document.createElement("span");
+        countSpan.className = "m-count";
+        countSpan.textContent = count;
+        nameRow.appendChild(countSpan);
+      }
+      card.appendChild(nameRow);
+
+      var dots = document.createElement("div");
+      dots.className = "mini-dots";
+      var offset = firstWeekdayMon(state.viewYear, m);
+      var total = daysInMonth(state.viewYear, m);
+      for(var i=0;i<offset;i++){
+        var e = document.createElement("div");
+        e.className = "mini-dot empty";
+        dots.appendChild(e);
+      }
+      for(var d=1; d<=total; d++){
+        var dot = document.createElement("div");
+        var key = dateKey(state.viewYear, m, d);
+        var isToday = sameDate(state.viewYear, m, d, today);
+        var hasE = (events[key] && events[key].length);
+        dot.className = "mini-dot" + (isToday ? " today" : (hasE ? " has-event" : ""));
+        dots.appendChild(dot);
+      }
+      card.appendChild(dots);
+
+      (function(monthIdx){
+        card.addEventListener("click", function(){
+          state.viewMonth = monthIdx;
+          renderMonth();
+          goTo("month");
+        });
+      })(m);
+
+      monthGrid.appendChild(card);
+    }
+  }
+
+  function countEventsInMonth(y,m){
+    var total = daysInMonth(y,m);
+    var c = 0;
+    for(var d=1; d<=total; d++){
+      var key = dateKey(y,m,d);
+      if(events[key]) c += events[key].length;
+    }
+    return c;
+  }
+
+  function sameDate(y,m,d,dateObj){
+    return y === dateObj.getFullYear() && m === dateObj.getMonth() && d === dateObj.getDate();
+  }
+
+  document.getElementById("prevYear").addEventListener("click", function(){
+    state.viewYear--; renderYear();
+  });
+  document.getElementById("nextYear").addEventListener("click", function(){
+    state.viewYear++; renderYear();
+  });
+
+  // ---------- Month view ----------
+  var monthTitle = document.getElementById("monthTitle");
+  var dayGrid = document.getElementById("dayGrid");
+
+  function renderMonth(){
+    monthTitle.textContent = MONTH_NAMES[state.viewMonth] + " " + state.viewYear;
+    dayGrid.innerHTML = "";
+    var offset = firstWeekdayMon(state.viewYear, state.viewMonth);
+    var total = daysInMonth(state.viewYear, state.viewMonth);
+
+    for(var i=0;i<offset;i++){
+      var empty = document.createElement("div");
+      empty.className = "day-cell empty";
+      dayGrid.appendChild(empty);
+    }
+
+    for(var d=1; d<=total; d++){
+      var cell = document.createElement("div");
+      var isToday = sameDate(state.viewYear, state.viewMonth, d, today);
+      cell.className = "day-cell" + (isToday ? " today" : "");
+
+      var num = document.createElement("span");
+      num.className = "d-num";
+      num.textContent = d;
+      cell.appendChild(num);
+
+      var key = dateKey(state.viewYear, state.viewMonth, d);
+      var list = events[key] || [];
+      if(list.length){
+        var dotRow = document.createElement("div");
+        dotRow.className = "dot-row";
+        var maxDots = Math.min(list.length, 3);
+        for(var k=0;k<maxDots;k++){
+          dotRow.appendChild(document.createElement("span"));
+        }
+        cell.appendChild(dotRow);
+      }
+
+      (function(day){
+        cell.addEventListener("click", function(){
+          openDay(state.viewYear, state.viewMonth, day);
+        });
+      })(d);
+
+      dayGrid.appendChild(cell);
+    }
+  }
+
+  document.getElementById("backToYear").addEventListener("click", function(){
+    navStack = ["year"];
+    render_currentScreen();
+    renderYear();
+  });
+  document.getElementById("prevMonth").addEventListener("click", function(){
+    state.viewMonth--;
+    if(state.viewMonth < 0){ state.viewMonth = 11; state.viewYear--; }
+    renderMonth();
+  });
+  document.getElementById("nextMonth").addEventListener("click", function(){
+    state.viewMonth++;
+    if(state.viewMonth > 11){ state.viewMonth = 0; state.viewYear++; }
+    renderMonth();
+  });
+
+  // ---------- Day view ----------
+  var dayEyebrow = document.getElementById("dayEyebrow");
+  var dayTitle = document.getElementById("dayTitle");
+  var eventList = document.getElementById("eventList");
+
+  function openDay(y,m,d){
+    state.selectedDate = dateKey(y,m,d);
+    var dow = DAY_NAMES[new Date(y,m,d).getDay()];
+    dayTitle.textContent = dow + " " + d;
+    dayEyebrow.textContent = MONTH_NAMES[m] + " " + y;
+    renderDayEvents();
+    goTo("day");
+  }
+
+  function renderDayEvents(){
+    eventList.innerHTML = "";
+    var list = eventsFor(state.selectedDate);
+    if(!list.length){
+      var empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.innerHTML = '<div class="es-icon">✦</div><p>No hay actividades este día.<br>Tocá el botón + para agendar algo.</p>';
+      eventList.appendChild(empty);
+      return;
+    }
+    list.forEach(function(ev){
+      var card = document.createElement("div");
+      card.className = "event-card";
+
+      var time = document.createElement("div");
+      time.className = "e-time";
+      time.textContent = ev.time || "—";
+      card.appendChild(time);
+
+      var body = document.createElement("div");
+      body.className = "e-body";
+      var title = document.createElement("div");
+      title.className = "e-title";
+      title.textContent = ev.title;
+      body.appendChild(title);
+      if(ev.note){
+        var note = document.createElement("div");
+        note.className = "e-note";
+        note.textContent = ev.note;
+        body.appendChild(note);
+      }
+      card.appendChild(body);
+
+      var del = document.createElement("button");
+      del.className = "e-del";
+      del.textContent = "✕";
+      del.addEventListener("click", function(){
+        deleteEvent(ev.id);
+      });
+      card.appendChild(del);
+
+      card.addEventListener("click", function(e){
+        if(e.target === del) return;
+        openSheet(ev);
+      });
+
+      eventList.appendChild(card);
+    });
+  }
+
+  document.getElementById("backToMonth").addEventListener("click", goBack);
+
+  function deleteEvent(id){
+    var key = state.selectedDate;
+    events[key] = (events[key] || []).filter(function(ev){ return ev.id !== id; });
+    if(events[key].length === 0) delete events[key];
+    saveEvents(events);
+    renderDayEvents();
+  }
+
+  // ---------- Sheet (add/edit) ----------
+  var sheet = document.getElementById("eventSheet");
+  var sheetBackdrop = document.getElementById("sheetBackdrop");
+  var sheetTitle = document.getElementById("sheetTitle");
+  var inpTitle = document.getElementById("inpTitle");
+  var inpTime = document.getElementById("inpTime");
+  var inpNote = document.getElementById("inpNote");
+
+  function isSheetOpen(){ return sheet.classList.contains("open"); }
+
+  function openSheet(existingEvent){
+    state.editingEventId = existingEvent ? existingEvent.id : null;
+    sheetTitle.textContent = existingEvent ? "Editar evento" : "Nuevo evento";
+    inpTitle.value = existingEvent ? existingEvent.title : "";
+    inpTime.value = existingEvent ? (existingEvent.time || "") : "";
+    inpNote.value = existingEvent ? (existingEvent.note || "") : "";
+    sheet.classList.add("open");
+    sheetBackdrop.classList.add("open");
+    setTimeout(function(){ inpTitle.focus(); }, 250);
+  }
+  function closeSheet(){
+    sheet.classList.remove("open");
+    sheetBackdrop.classList.remove("open");
+    inpTitle.blur(); inpTime.blur(); inpNote.blur();
+  }
+
+  document.getElementById("addEventBtn").addEventListener("click", function(){ openSheet(null); });
+  document.getElementById("cancelSheet").addEventListener("click", closeSheet);
+  sheetBackdrop.addEventListener("click", closeSheet);
+
+  document.getElementById("saveEvent").addEventListener("click", function(){
+    var title = inpTitle.value.trim();
+    if(!title){
+      inpTitle.focus();
+      return;
+    }
+    var key = state.selectedDate;
+    if(!events[key]) events[key] = [];
+
+    if(state.editingEventId){
+      var ev = events[key].find(function(e){ return e.id === state.editingEventId; });
+      if(ev){
+        ev.title = title;
+        ev.time = inpTime.value;
+        ev.note = inpNote.value.trim();
+      }
+    } else {
+      events[key].push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+        title: title,
+        time: inpTime.value,
+        note: inpNote.value.trim()
+      });
+    }
+    saveEvents(events);
+    closeSheet();
+    renderDayEvents();
+    renderMonth();
+  });
+
+  // ---------- Init ----------
+  renderYear();
+  renderMonth();
+
+  // ---------- PWA: service worker ----------
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){ /* opcional, no crítico */ });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
